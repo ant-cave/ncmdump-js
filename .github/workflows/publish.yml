@@ -1,0 +1,73 @@
+name: Publish
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.get-version.outputs.version }}
+      is_prerelease: ${{ steps.check-prerelease.outputs.is_prerelease }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: get-version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+      - id: check-prerelease
+        run: |
+          VERSION="${{ steps.get-version.outputs.version }}"
+          # 版本号包含 "-"(如 0.2.0-beta.1)-> prerelease,否则为 release
+          case "$VERSION" in
+            *-*) echo "is_prerelease=true" ;;
+            *)   echo "is_prerelease=false" ;;
+          esac >> $GITHUB_OUTPUT
+      - name: Check package.json version
+        run: |
+          V=$(node -p "require('./package.json').version")
+          [ "$V" = "${{ steps.get-version.outputs.version }}" ] || { echo "package.json version mismatch: $V"; exit 1; }
+
+  publish-npm:
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org/
+      - uses: pnpm/action-setup@v4
+      - run: pnpm install --frozen-lockfile
+      # prepublishOnly 会自动执行 test 与 build
+      - run: |
+          if [ "${{ needs.validate.outputs.is_prerelease }}" = "true" ]; then
+            pnpm publish --no-git-checks --tag next
+          else
+            pnpm publish --no-git-checks
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  create-release:
+    needs: [validate, publish-npm]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: pnpm/action-setup@v4
+      - name: Build and pack package
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm build
+          pnpm pack
+      - uses: softprops/action-gh-release@v2
+        with:
+          prerelease: ${{ needs.validate.outputs.is_prerelease == 'true' }}
+          generate_release_notes: true
+          files: |
+            ncmdump-js-${{ needs.validate.outputs.version }}.tgz

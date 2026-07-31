@@ -1,0 +1,57 @@
+{
+  "name": "ncmdump-js",
+  "version": "0.1.0",
+  "description": "纯前端解密网易云音乐 ncm 加密文件，输出 mp3/flac，支持写入歌曲信息与封面",
+  "type": "module",
+  "main": "./dist/ncmdump.cjs",
+  "module": "./dist/ncmdump.js",
+  "browser": "./dist/ncmdump.umd.min.js",
+  "unpkg": "./dist/ncmdump.umd.min.js",
+  "jsdelivr": "./dist/ncmdump.umd.min.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/ncmdump.js",
+      "require": "./dist/ncmdump.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && cp index.d.ts dist/index.d.ts",
+    "test": "vitest run",
+    "prepublishOnly": "npm run test && npm run build"
+  },
+  "keywords": [
+    "ncm",
+    "netease",
+    "netease-cloud-music",
+    "ncmdump",
+    "decrypt",
+    "mp3",
+    "flac",
+    "browser"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "aes-js": "^3.1.2",
+    "browser-id3-writer": "^4.4.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.4",
+    "@vitejs/plugin-vue": "^5.2.1",
+    "music-metadata": "^10.7.0",
+    "tailwindcss": "^4.1.4",
+    "vite": "^6.0.11",
+    "vitest": "^3.0.7",
+    "vue": "^3.5.13"
+  }
+}

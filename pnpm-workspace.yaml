@@ -1,0 +1,6 @@
+allowBuilds:
+  esbuild: true
+# pnpm 配置
+# 放行必要的依赖构建脚本
+onlyBuiltDependencies:
+  - esbuild
