@@ -1,6 +1,6 @@
 // ncmdump-js 核心测试
 // 覆盖:真实 ncm 文件解码 / 非法输入 / dump 输出 / MP3 往返测试
-import { describe, it, expect, beforeAll } from 'vitest'
+import { describe, it, expect, beforeAll, afterEach } from 'vitest'
 import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { parseBuffer } from 'music-metadata'
@@ -147,5 +147,88 @@ describe('MP3 往返测试(合成 ncm)', () => {
     const tail = bytes.slice(-128)
     expect(tail[0]).not.toBe(0x54)
     expect(audio.length).toBe(withId3v1.length)
+  })
+})
+
+describe('缺失封面自动拉取(fetchMissingCover)', () => {
+  const ORIGINAL_FETCH = globalThis.fetch
+
+  afterEach(() => {
+    globalThis.fetch = ORIGINAL_FETCH
+  })
+
+  // 构造无封面、但元数据带 albumPic 的 ncm
+  function buildNoCoverNcm() {
+    const mp3 = new Uint8Array([
+      0x49, 0x44, 0x33, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    ])
+    return buildNcm({
+      audio: mp3,
+      albumPic: 'http://p4.music.126.net/abc==/123.jpg',
+    })
+  }
+
+  it('未内置封面时自动从 CDN 拉取并写入', async () => {
+    const fetchedUrls = []
+    // 用仓库内的真实 PNG fixture 作为"拉取到的封面"
+    const fakePng = new Uint8Array(await readFile(PNG_PATH))
+    globalThis.fetch = async (url) => {
+      fetchedUrls.push(url)
+      return {
+        ok: true,
+        arrayBuffer: async () => fakePng.buffer.slice(fakePng.byteOffset, fakePng.byteOffset + fakePng.byteLength),
+      }
+    }
+
+    const ncm = buildNoCoverNcm()
+    const result = await dump(ncm)
+    // 构造的合成 ncm 无封面,由 CDN 拉取补齐
+    expect(result.image).toBeTruthy()
+    expect(result.image).toEqual(fakePng)
+    // 拉取时把 http 升级为 https
+    expect(fetchedUrls[0]).toMatch(/^https:\/\//)
+  })
+
+  it('fetchMissingCover:false 时不发起网络请求', async () => {
+    let called = false
+    globalThis.fetch = async () => {
+      called = true
+      return { ok: true, arrayBuffer: async () => new ArrayBuffer(0) }
+    }
+
+    const ncm = buildNoCoverNcm()
+    const result = await dump(ncm, { fetchMissingCover: false })
+    expect(called).toBe(false)
+    // 无内置封面且关闭拉取时,image 为 null
+    expect(result.image).toBeNull()
+  })
+
+  it('拉取失败时静默降级为 null,不抛错', async () => {
+    globalThis.fetch = async () => {
+      throw new Error('network error')
+    }
+
+    const ncm = buildNoCoverNcm()
+    const result = await dump(ncm)
+    expect(result.image).toBeNull()
+  })
+
+  it('无 albumPic 元数据时不发请求', async () => {
+    let called = false
+    globalThis.fetch = async () => {
+      called = true
+      return { ok: true, arrayBuffer: async () => new ArrayBuffer(0) }
+    }
+
+    // 构造无封面且无 albumPic 的 ncm
+    const mp3 = new Uint8Array([0x49, 0x44, 0x33, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
+    const ncm = buildNcm({ audio: mp3 })
+    const { metadata } = parseNcm(ncm)
+    expect(metadata.albumPic).toBeUndefined()
+
+    const result = await dump(ncm)
+    // 没有 albumPic 时 fetchCover 直接返回 null,不调用 fetch
+    expect(called).toBe(false)
+    expect(result.image).toBeNull()
   })
 })

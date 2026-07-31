@@ -10,6 +10,7 @@
 - 自动识别 mp3 / flac
 - 解析歌曲标题、歌手、专辑、封面
 - 为输出文件写入标签与封面(MP3 用 ID3v2,FLAC 用 Vorbis Comment + PICTURE)
+- ncm 未内置封面时自动从网易云 CDN 拉取(可关闭)
 - 同时产出 ESM / CJS / UMD 三份产物,浏览器、Node、打包工具都能用
 - 附带 TypeScript 类型声明(`index.d.ts`)
 - 单元测试包含真实 `test.ncm` 文件验证
@@ -70,6 +71,7 @@ await writeFile(result.filename, result.audio)
 | `input` | `File` / `Blob` / `ArrayBuffer` / `Uint8Array` | ncm 文件内容 |
 | `options.fixMetadata` | `boolean` | 默认 `true`,写入标题/歌手/专辑/封面;`false` 时输出裸音频 |
 | `options.filename` | `string` | 自定义输出文件名(不含扩展名),默认取歌名 |
+| `options.fetchMissingCover` | `boolean` | 默认 `true`,当 ncm 未内置封面时从网易云 CDN 拉取;`false` 时跳过网络请求 |
 
 返回的 `DumpResult`:
 
@@ -86,6 +88,7 @@ await writeFile(result.filename, result.audio)
 ### 其他导出
 
 - `parseNcm(bytes)` — 只解析,返回 `{ format, metadata, image, audio }`
+- `fetchCover(metadata)` — 从网易云 CDN 拉取封面字节,失败返回 `null`
 - `downloadBlob(blob, filename)` — 浏览器中触发 Blob 下载
 - `buildKeyBox(key)` / `decryptData(keyBox, buffer)` — 底层流解密工具
 - `aesEcbDecrypt(key, src)` / `CORE_KEY` / `MODIFY_KEY` — 底层 AES 工具
@@ -127,6 +130,7 @@ git push --tags
 
 - 本项目仅用于学习与个人合法用途,请尊重音乐版权。
 - 封面图的宽高在 FLAC 中标记为未知(0),不影响播放器显示。
+- 网易云音乐 3.0+ 部分版本下载的 ncm 文件不内置封面,此时 `dump()` 会默认从网易云 CDN 按 `albumPic` 地址拉取封面;如不需要联网,请传 `fetchMissingCover: false`。
 
 ## License
 

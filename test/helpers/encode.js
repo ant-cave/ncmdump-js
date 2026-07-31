@@ -44,10 +44,10 @@ const enc = new TextEncoder()
 
 /**
  * 把音频加密为 ncm 文件字节
- * @param {{ audio: Uint8Array, musicName?: string, artistName?: string, album?: string, image?: Uint8Array }} param
+ * @param {{ audio: Uint8Array, musicName?: string, artistName?: string, album?: string, image?: Uint8Array, albumPic?: string }} param
  * @returns {Uint8Array}
  */
-export function buildNcm({ audio, musicName = '测试歌曲', artistName = '测试歌手', album = '测试专辑', image }) {
+export function buildNcm({ audio, musicName = '测试歌曲', artistName = '测试歌手', album = '测试专辑', image, albumPic }) {
   // 1. 密钥:17 字节固定前缀 + 随机 key
   const keyPrefix = Uint8Array.from({ length: 17 }, () => Math.floor(Math.random() * 256))
   const key = Uint8Array.from({ length: 17 }, () => Math.floor(Math.random() * 256))
@@ -69,6 +69,7 @@ export function buildNcm({ audio, musicName = '测试歌曲', artistName = '测�
     format: 'mp3',
     bitrate: 48000,
     duration: 1000,
+    albumPic,
   })
   const metaEnc = aesEcbEncrypt(MODIFY_KEY, concat([enc.encode('music:'), enc.encode(metaJson)]))
   const metaB64 = enc.encode(base64Encode(metaEnc))

@@ -39,6 +39,8 @@ export interface DumpOptions {
   fixMetadata?: boolean
   /** 自定义输出文件名(不含扩展名),默认取歌名 */
   filename?: string
+  /** 当 ncm 未内置封面时从网易云 CDN 拉取,默认 true;false 则跳过网络请求 */
+  fetchMissingCover?: boolean
 }
 
 export type NcmInput = Blob | ArrayBuffer | Uint8Array
@@ -55,6 +57,9 @@ export function dump(input: NcmInput, options?: DumpOptions): Promise<DumpResult
 
 /** 在浏览器中触发 Blob 下载 */
 export function downloadBlob(blob: Blob, filename: string): void
+
+/** 当 ncm 未内置封面时,从网易云 CDN 拉取封面字节;失败返回 null */
+export function fetchCover(metadata: NcmMetadata | null): Promise<Uint8Array | null>
 
 /** 解析 ncm 文件字节,返回音频/元数据/封面(不改动传入数据) */
 export function parseNcm(input: ArrayBufferView | ArrayBuffer): ParseResult
