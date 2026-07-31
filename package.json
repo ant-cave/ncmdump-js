@@ -1,6 +1,6 @@
 {
   "name": "ncmdump-js",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "纯前端解密网易云音乐 ncm 加密文件，输出 mp3/flac，支持写入歌曲信息与封面",
   "type": "module",
   "packageManager": "pnpm@11.13.0",

@@ -132,6 +132,12 @@ git push --tags
 - 封面图的宽高在 FLAC 中标记为未知(0),不影响播放器显示。
 - 网易云音乐 3.0+ 部分版本下载的 ncm 文件不内置封面,此时 `dump()` 会默认从网易云 CDN 按 `albumPic` 地址拉取封面;如不需要联网,请传 `fetchMissingCover: false`。
 
+## 支持
+
+如果你觉得这个项目对你有帮助,欢迎来 [GitHub](https://github.com/ant-cave/ncmdump-js) 点个 Star,这是对我最大的鼓励。
+
+如果你在自己的项目里用到了本项目的代码,希望能提我一嘴(比如在 README 里标注"解密逻辑参考自 [ncmdump-js](https://github.com/ant-cave/ncmdump-js)")。虽然不是协议要求,但会让我很有动力继续维护下去。
+
 ## License
 
 MIT
