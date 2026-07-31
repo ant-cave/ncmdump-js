@@ -11,6 +11,8 @@
 - 解析歌曲标题、歌手、专辑、封面
 - 为输出文件写入标签与封面(MP3 用 ID3v2,FLAC 用 Vorbis Comment + PICTURE)
 - 同时产出 ESM / CJS / UMD 三份产物,浏览器、Node、打包工具都能用
+- 附带 TypeScript 类型声明(`index.d.ts`)
+- 单元测试包含真实 `test.ncm` 文件验证
 
 ## 安装
 
@@ -38,7 +40,7 @@ document.getElementById('file').addEventListener('change', async (e) => {
 ### 浏览器(`<script>` 标签 + CDN,无需打包)
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/ncmdump-js@0.1.0/dist/ncmdump.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/ncmdump-js@latest/dist/ncmdump.umd.min.js"></script>
 <script>
 document.getElementById('file').addEventListener('change', async (e) => {
   const result = await NcmDump.dump(e.target.files[0])
@@ -51,10 +53,10 @@ document.getElementById('file').addEventListener('change', async (e) => {
 
 ```js
 import { dump } from 'ncmdump-js'
-import { writeFile } from 'node:fs/promises'
+import { readFile, writeFile } from 'node:fs/promises'
 
 const result = await dump(await readFile('song.ncm'))
-await writeFile(result.filename, result.blob)
+await writeFile(result.filename, result.audio)
 ```
 
 ## API
@@ -88,6 +90,21 @@ await writeFile(result.filename, result.blob)
 - `buildKeyBox(key)` / `decryptData(keyBox, buffer)` — 底层流解密工具
 - `aesEcbDecrypt(key, src)` / `CORE_KEY` / `MODIFY_KEY` — 底层 AES 工具
 
+## 工作原理
+
+1. 读取文件头魔数,确认是 ncm 格式(前 8 字节 `0x4e4554434d414431`,即 "NETCMAD1")
+2. 用固定公钥 `CORE_KEY` 对密钥段做 AES-128-ECB 解密,再按字节异或得到真正的 AES 密钥
+3. 用该密钥对元数据段 AES-128-ECB 解密并异或,解析出 JSON(歌名/歌手/专辑/封面等)
+4. 封面图片段跳过,其余为音频流段
+5. 音频流段用 `buildKeyBox` + `decryptData` 逐字节异或还原成裸 mp3 / flac 数据
+6. 可选写入标签:MP3 追加 ID3v2,FLAC 追加 Vorbis Comment + PICTURE 封面
+
+## 兼容性
+
+- 浏览器:需要支持 `Blob` / `Uint8Array`,现代浏览器均可(含移动端)
+- Node.js:≥ 18(依赖 `Blob`,Node 18+ 内置)
+- 可通过 `<script>` 标签(UMD,全局 `NcmDump`)或 ESM / CJS 模块引入
+
 ## 开发
 
 ```bash
@@ -95,6 +112,15 @@ pnpm install
 pnpm test    # 单元测试(含与真实 test.ncm 的验证)
 pnpm dev     # 本地浏览器 demo
 pnpm build   # 构建 dist 三产物
+```
+
+## 发布
+
+打 `v*` tag 即触发 GitHub Actions 发布流程(校验版本号一致 → 发布 npm → 生成 GitHub Release):
+
+```bash
+pnpm version <version>
+git push --tags
 ```
 
 ## 说明
